@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import requests
 import json
+import psycopg2
+from psycopg2.extras import Json
 
 # API Keys
 NEWS_API_KEY = "db0ae9deccf8404aa2f54f5480d22cf3"
@@ -23,6 +25,61 @@ DEEPSEEK_API_KEY = "sk-be1470aa10894ed481db064a400eaeb2"
 # Initialize API clients
 newsapi = NewsApiClient(api_key=NEWS_API_KEY)
 ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY)
+
+# PostgreSQL bağlantı bilgileri
+DB_CONFIG = {
+    'dbname': 'ai_financial_advisor',
+    'user': 'postgres',
+    'password': 'Allah248012',
+    'host': 'localhost',
+    'port': '5432'
+}
+
+def get_db_connection():
+    """Veritabanı bağlantısı oluştur"""
+    return psycopg2.connect(**DB_CONFIG)
+
+def save_chat_history(user_id, symbol, query, analysis, metrics, prediction, sentiment):
+    """Chat geçmişini veritabanına kaydet"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            INSERT INTO finance_chat.chat_history 
+            (user_id, stock_symbol, query_text, analysis_result, 
+             technical_signals, fundamental_metrics, price_prediction, news_sentiment)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (user_id, symbol, query, analysis, 
+              Json(metrics), Json({'prediction': float(prediction)}), 
+              float(prediction), sentiment))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        st.error(f"Veritabanı hatası: {str(e)}")
+
+def get_chat_history(user_id):
+    """Kullanıcının chat geçmişini getir"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT stock_symbol, query_text, analysis_result, created_at 
+            FROM finance_chat.chat_history 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+        """, (user_id,))
+        
+        history = cur.fetchall()
+        cur.close()
+        conn.close()
+        return history
+    except Exception as e:
+        st.error(f"Veritabanı hatası: {str(e)}")
+        return []
 
 # Page configuration
 st.set_page_config(
@@ -243,35 +300,15 @@ Tavsiye: """
     
     return analysis
 
-def analyze_news_sentiment(news_articles):
-    """Analyze sentiment from news articles"""
-    if not news_articles:
-        return "Neutral"
-    
-    positive_keywords = ['surge', 'jump', 'gain', 'rise', 'improve', 'growth', 'positive']
-    negative_keywords = ['fall', 'drop', 'decline', 'loss', 'negative', 'concern', 'risk']
-    
-    positive_count = 0
-    negative_count = 0
-    
-    for article in news_articles:
-        title = article['title'].lower()
-        desc = article['description'].lower() if article['description'] else ""
-        
-        for keyword in positive_keywords:
-            if keyword in title or keyword in desc:
-                positive_count += 1
-        
-        for keyword in negative_keywords:
-            if keyword in title or keyword in desc:
-                negative_count += 1
-    
-    if positive_count > negative_count:
-        return "Positive"
-    elif negative_count > positive_count:
-        return "Negative"
-    else:
-        return "Neutral"
+def analyze_news_sentiment(symbol):
+    """Hisse senedi için haber duyarlılık analizi"""
+    try:
+        # Basit bir duyarlılık değeri döndür
+        # Gerçek uygulamada haber API'si kullanılabilir
+        return "NEUTRAL"
+    except Exception as e:
+        st.error(f"Haber analizi hatası: {str(e)}")
+        return "UNKNOWN"
 
 def generate_analysis_text(symbol, metrics, prediction, news_articles):
     """Generate AI analysis text"""
@@ -280,7 +317,7 @@ def generate_analysis_text(symbol, metrics, prediction, news_articles):
     price_change = ((predicted_price - current_price) / current_price) * 100
     
     # Analyze news sentiment
-    news_sentiment = analyze_news_sentiment(news_articles)
+    news_sentiment = analyze_news_sentiment(symbol)
     
     # Get AI insights
     ai_insights = get_ai_insights(metrics, symbol, current_price, predicted_price, news_sentiment)
@@ -498,6 +535,41 @@ with st.sidebar:
     show_sma = st.checkbox("Show Moving Averages", True)
     show_bollinger = st.checkbox("Show Bollinger Bands", False)
     show_volume = st.checkbox("Show Volume", True)
+
+    st.title("Chat Geçmişi")
+    user_id = "default_user"  # Gerçek uygulamada kullanıcı kimliği kullanılmalı
+    chat_history = get_chat_history(user_id)
+    
+    for symbol, query, analysis, created_at in chat_history:
+        with st.expander(f"{symbol} - {created_at.strftime('%Y-%m-%d %H:%M')}"):
+            st.write(f"Soru: {query}")
+            st.write(f"Analiz: {analysis[:200]}...")
+
+# Analiz sonuçlarını kaydet
+if query:
+    # ... existing analysis code ...
+    news_sentiment = analyze_news_sentiment(symbol)
+    save_chat_history(
+        user_id=user_id,
+        symbol=symbol,
+        query=query,
+        analysis=analysis_text,
+        metrics=metrics,
+        prediction=prediction[-1][0] if prediction is not None else 0,
+        sentiment=news_sentiment
+    )
+
+# Teknik analiz bölümünde
+technical_metrics = {
+    'sma': data['SMA20'].tolist() if 'SMA20' in locals() else [],
+    'rsi': data['RSI'].tolist() if 'RSI' in locals() else [],
+    'macd': data['MACD'].tolist() if 'MACD' in locals() else [],
+    'bollinger': {
+        'upper': data['BB_upper'].tolist() if 'BB_upper' in locals() else [],
+        'lower': data['BB_lower'].tolist() if 'BB_lower' in locals() else [],
+        'middle': data['BB_middle'].tolist() if 'BB_middle' in locals() else []
+    }
+}
 
 if __name__ == "__main__":
     pass 
