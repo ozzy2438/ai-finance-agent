@@ -1,35 +1,43 @@
 # Financial Market Analysis Dashboard
 
-Bu proje, yapay zeka destekli finansal piyasa analizi ve yatırım öngörüleri sunan interaktif bir dashboard uygulamasıdır.
+This project provides an AI driven dashboard for analyzing financial markets and creating investment forecasts. It offers interactive visuals and automatic insights in Turkish and English.
 
-## Özellikler
+## Project Features / Proje Özellikleri
+- Market overview and trend analysis
+- Stock analysis with technical indicators
+- Portfolio forecasting
+- News and sentiment analysis
 
-- Piyasa genel görünümü ve trend analizi
-- Hisse senedi analizi ve teknik göstergeler
-- Portföy öngörüleri
-- Haberler ve duygu analizi
-
-## Kurulum
-
-1. Python 3.11 veya üstü sürümün yüklü olduğundan emin olun
-2. Gerekli paketleri yükleyin:
+## Prerequisites / Gereksinimler
+1. Python 3.11 or higher installed
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Kullanım
+## Environment Configuration
+1. Copy the example environment file and edit it:
+```bash
+cp .env.example .env
+```
+2. Open `.env` and fill in your API keys and database credentials:
+   - `ALPHA_VANTAGE_API_KEY`
+   - `FINNHUB_API_KEY`
+   - `NEWS_API_KEY`
+   - `DEEPSEEK_API_KEY`
+   - `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
+   - other optional settings
 
-Uygulamayı başlatmak için:
+## Running the App / Uygulamanın Çalıştırılması
+Start the Streamlit dashboard:
 ```bash
 streamlit run app.py
 ```
+The app will read the variables from your `.env` file to connect to the database and external APIs.
 
-## API Anahtarları
+## Contribution
+Contributions are welcome! Please open an issue or submit a pull request for improvements.
 
-Uygulama aşağıdaki API'leri kullanmaktadır:
-- News API
-- Alpha Vantage
+## License
+This project is distributed under the MIT License.
 
-## Lisans
-
-MIT 
