@@ -16,6 +16,9 @@ import requests
 import json
 import psycopg2
 from psycopg2.extras import Json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # API Keys
 NEWS_API_KEY = "db0ae9deccf8404aa2f54f5480d22cf3"
